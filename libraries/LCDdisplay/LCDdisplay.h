@@ -10,7 +10,8 @@ public:
     LCDdisplay(const char* ssid, const char* password);
 
     void begin();
-    void update();
+    void update(); // Cũ: cập nhật dựa trên dữ liệu đã set trước
+    void update(int aqi, int temp, int hum, int mode, int dayLeft, bool powerState); // Mới: truyền dữ liệu trực tiếp
 
     void setPower(bool state);
     void setTempHum(int temp, int hum);
@@ -30,9 +31,8 @@ private:
     int temp;
     int hum;
 
-    int getAirQuality();
-    uint16_t getAQIColor(int aqi);
     void drawAQIRing(int centerX, int centerY, int innerRadius, int outerRadius, int aqi);
+    uint16_t getAQIColor(int aqi);
     void drawPowerSymbol(int x, int y, int radius, uint16_t color);
     void drawFanModeSymbol(int x, int y, int radius, int mode, uint16_t color);
     void displayMaintenanceDaysLeft(int x, int y, int daysLeft, uint16_t textColor, uint16_t bgColor);
@@ -42,4 +42,3 @@ private:
 };
 
 #endif
-

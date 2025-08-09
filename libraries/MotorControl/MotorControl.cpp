@@ -28,7 +28,7 @@ MotorMode MotorControl::getMode() {
 }
 
 void MotorControl::setAutoSpeed(uint8_t sensorValue) {
-  _autoDuty = map(sensorValue, 0, 4, 0, 255);
+  _autoDuty = map(sensorValue, 0, 4, 50, 255);
   if (_currentMode == MODE_AUTO) {
     ledcWrite(_pwmChannel, _autoDuty);
   }

@@ -9,23 +9,20 @@
 
 MQUnifiedsensor mq135(Board, Voltage_Resolution, ADC_Bit_Resolution, pin, type);
 
-enum MucCanhBao {TOT = 0, AN_TOAN, TRUNG_BINH, KEM, NGUY_HIEM};
+// 3 mức cảnh báo
+enum MucCanhBao { AN_TOAN = 0, TRUNG_BINH, NGUY_HIEM };
 
-static MucCanhBao xepLoai(float giaTri, float n1, float n2, float n3, float n4) {
-  if (giaTri < n1) return TOT;
-  else if (giaTri < n2) return AN_TOAN;
-  else if (giaTri < n3) return TRUNG_BINH;
-  else if (giaTri < n4) return KEM;
+static MucCanhBao xepLoai(float giaTri, float nguongTB, float nguongNH) {
+  if (giaTri < nguongTB) return AN_TOAN;
+  else if (giaTri < nguongNH) return TRUNG_BINH;
   else return NGUY_HIEM;
 }
 
 static String tenMuc(MucCanhBao muc) {
   switch (muc) {
-    case TOT: return "Tốt ✅";
-    case AN_TOAN: return "An toàn 👍";
-    case TRUNG_BINH: return "Trung bình ⚠️";
-    case KEM: return "Kém ❗";
-    case NGUY_HIEM: return "Nguy hiểm 🚨";
+    case AN_TOAN: return "An toàn";
+    case TRUNG_BINH: return "Trung bình";
+    case NGUY_HIEM: return "Nguy hiểm";
     default: return "";
   }
 }
@@ -33,9 +30,7 @@ static String tenMuc(MucCanhBao muc) {
 void mq135_init() {
   mq135.setRegressionMethod(1);
   mq135.init();
-
-   mq135.setR0(25.0); // kOhm - R0 cố địnhyt        bbb
-
+  mq135.setR0(25.0); // kOhm - R0 cố định
 }
 
 MQ135_Data mq135_read() {
@@ -68,14 +63,14 @@ MQ135_Data mq135_read() {
   data.R0 = mq135.getR0();
   data.Ratio = mq135.getRS() / mq135.getR0();
 
-  // Xếp loại
-  MucCanhBao mucMax = TOT;
-  mucMax = max(mucMax, xepLoai(data.CO, 4, 9, 35, 100));
-  mucMax = max(mucMax, xepLoai(data.Alcohol, 10, 50, 200, 500));
-  mucMax = max(mucMax, xepLoai(data.CO2, 400, 1000, 2000, 5000));
-  mucMax = max(mucMax, xepLoai(data.Toluen, 50, 100, 300, 600));
-  mucMax = max(mucMax, xepLoai(data.NH4, 25, 50, 100, 300));
-  mucMax = max(mucMax, xepLoai(data.Aceton, 50, 100, 300, 600));
+  // Xếp loại theo 3 mức
+  MucCanhBao mucMax = AN_TOAN;
+  mucMax = max(mucMax, xepLoai(data.CO, 9, 35));          // CO
+  mucMax = max(mucMax, xepLoai(data.Alcohol, 50, 200));   // Alcohol
+  mucMax = max(mucMax, xepLoai(data.CO2, 1000, 2000));    // CO2
+  mucMax = max(mucMax, xepLoai(data.Toluen, 100, 300));   // Toluen
+  mucMax = max(mucMax, xepLoai(data.NH4, 50, 100));       // NH4
+  mucMax = max(mucMax, xepLoai(data.Aceton, 100, 300));   // Aceton
 
   data.canhBao = mucMax;
 
@@ -95,6 +90,6 @@ void mq135_print(const MQ135_Data& d) {
   Serial.print("Toluen (ppm): "); Serial.println(d.Toluen);
   Serial.print("NH4 (ppm): "); Serial.println(d.NH4);
   Serial.print("Aceton (ppm): "); Serial.println(d.Aceton);
-  Serial.print("→ Cảnh báo: "); Serial.println(d.canhBao);
+  Serial.print("→ Cảnh báo: "); Serial.println(tenMuc((MucCanhBao)d.canhBao));
   Serial.println("===================================");
 }
