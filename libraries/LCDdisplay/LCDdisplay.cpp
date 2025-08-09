@@ -35,22 +35,10 @@ void LCDdisplay::update() {
         return;
     }
 
-    aqi = getAirQuality();
-    uint16_t color = getAQIColor(aqi);
-
-    for (int r = 107; r <= 118; r++) {
-        tft.drawCircle(120, 120, r, color);
-    }
+    drawAQIRing(120, 120, 107, 118, aqi);
 
     displayDate(120, 55, &timeinfo);
     drawFanModeSymbol(60, 90, 20, mode, TFT_WHITE);
-
-    if (mode < 3) mode++;
-    else mode = 0;
-
-    if (dayLeft > 0) dayLeft--;
-    else dayLeft = 100;
-
     displayMaintenanceDaysLeft(130, 100, dayLeft, TFT_CYAN, TFT_BLACK);
     displayTempHumidity(120, 150, temp, hum);
     displayTime(120, 186, &timeinfo, TFT_WHITE, &Orbitron_Light_24);
@@ -64,12 +52,6 @@ void LCDdisplay::setMode(int m) { mode = m; }
 void LCDdisplay::setDayLeft(int days) { dayLeft = days; }
 void LCDdisplay::setAQI(int value) { aqi = value; }
 
-int LCDdisplay::getAirQuality() {
-    aqi++;
-    if (aqi == 500) aqi = 0;
-    return aqi;
-}
-
 uint16_t LCDdisplay::getAQIColor(int aqi) {
     aqi = constrain(aqi, 0, 500);
     uint8_t r = map(aqi, 0, 500, 0, 255);
@@ -77,7 +59,13 @@ uint16_t LCDdisplay::getAQIColor(int aqi) {
     return tft.color565(r, g, 0);
 }
 
-// ==== Copy nguyên code các hàm vẽ từ code gốc ====
+void LCDdisplay::drawAQIRing(int centerX, int centerY, int innerRadius, int outerRadius, int aqi) {
+    uint16_t color = getAQIColor(aqi);
+    for (int r = innerRadius; r <= outerRadius; r++) {
+        tft.drawCircle(centerX, centerY, r, color);
+    }
+}
+
 void LCDdisplay::drawPowerSymbol(int x, int y, int radius, uint16_t color) {
     for (int r = radius - 1; r <= radius + 1; r++) {
         for (int angle = 135; angle <= 405; angle++) {
@@ -171,3 +159,4 @@ void LCDdisplay::displayTempHumidity(int centerX, int rectY, int temp, int hum) 
     tft.fillCircle(centerX - 32, rectY - 20, 4, TFT_WHITE);
     tft.fillCircle(centerX - 32, rectY - 20, 2, TFT_BLACK);
 }
+
