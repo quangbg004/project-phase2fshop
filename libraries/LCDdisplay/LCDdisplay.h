@@ -32,6 +32,7 @@ private:
 
     int getAirQuality();
     uint16_t getAQIColor(int aqi);
+    void drawAQIRing(int centerX, int centerY, int innerRadius, int outerRadius, int aqi);
     void drawPowerSymbol(int x, int y, int radius, uint16_t color);
     void drawFanModeSymbol(int x, int y, int radius, int mode, uint16_t color);
     void displayMaintenanceDaysLeft(int x, int y, int daysLeft, uint16_t textColor, uint16_t bgColor);
@@ -41,3 +42,4 @@ private:
 };
 
 #endif
+
