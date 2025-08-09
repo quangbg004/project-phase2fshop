@@ -10,8 +10,29 @@ public:
     LCDdisplay(const char* ssid, const char* password);
 
     void begin();
-    void update(); // Cũ: cập nhật dựa trên dữ liệu đã set trước
-    void update(int aqi, int temp, int hum, int mode, int dayLeft, bool powerState); // Mới: truyền dữ liệu trực tiếp
+
+    // Các hàm update riêng biệt
+    void updateAQI(int aqi);
+    void updateTempHum(int temp, int hum);
+    void updateMode(int mode);
+    void updateDayLeft(int dayLeft);
+    void updatePowerState(bool powerState);
+    void updateTime();
+
+    // Hàm cập nhật lại màn hình tổng quan
+    void updateDisplay();
+
+private:
+    TFT_eSPI tft;
+    const char* ssidLCD;
+    const char* passwordLCD;
+
+    bool isPowerOnLCD;
+    int modeLCD;
+    int dayLeftLCD;
+    int aqiLCD;
+    int tempLCD;
+    int humLCD;
 
     void setPower(bool state);
     void setTempHum(int temp, int hum);
@@ -19,20 +40,9 @@ public:
     void setDayLeft(int days);
     void setAQI(int value);
 
-private:
-    TFT_eSPI tft;
-    const char* ssid;
-    const char* password;
-
-    bool isPowerOn;
-    int mode;
-    int dayLeft;
-    int aqi;
-    int temp;
-    int hum;
+    uint16_t getAQIColor(int aqi);
 
     void drawAQIRing(int centerX, int centerY, int innerRadius, int outerRadius, int aqi);
-    uint16_t getAQIColor(int aqi);
     void drawPowerSymbol(int x, int y, int radius, uint16_t color);
     void drawFanModeSymbol(int x, int y, int radius, int mode, uint16_t color);
     void displayMaintenanceDaysLeft(int x, int y, int daysLeft, uint16_t textColor, uint16_t bgColor);

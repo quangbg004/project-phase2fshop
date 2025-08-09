@@ -1,7 +1,8 @@
 #include "LCDdisplay.h"
 
 LCDdisplay::LCDdisplay(const char* ssid, const char* password)
-: tft(TFT_eSPI()), ssid(ssid), password(password), isPowerOn(true), mode(0), dayLeft(100), aqi(0), temp(30), hum(50) {}
+: tft(TFT_eSPI()), ssidLCD(ssid), passwordLCD(password),
+  isPowerOnLCD(true), modeLCD(0), dayLeftLCD(100), aqiLCD(0), tempLCD(30), humLCD(50) {}
 
 void LCDdisplay::begin() {
     Serial.begin(115200);
@@ -12,53 +13,85 @@ void LCDdisplay::begin() {
     tft.setRotation(1);
     tft.fillScreen(TFT_BLACK);
 
-    WiFi.begin(ssid, password);
+    WiFi.begin(ssidLCD, passwordLCD);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
     Serial.println("\nWiFi connected!");
     configTime(7 * 3600, 0, "pool.ntp.org");
+
+    updateDisplay(); // Vẽ màn hình lần đầu
 }
 
-void LCDdisplay::update(int aqi, int temp, int hum, int mode, int dayLeft, bool powerState) {
-    // Gọi các hàm set để lưu giá trị vào biến thành viên
+void LCDdisplay::updateAQI(int aqi) {
     setAQI(aqi);
-    setTempHum(temp, hum);
-    setMode(mode);
-    setDayLeft(dayLeft);
-    setPower(powerState);
+    drawAQIRing(120, 120, 107, 118, aqiLCD);
+}
 
+void LCDdisplay::updateTempHum(int temp, int hum) {
+    setTempHum(temp, hum);
+    displayTempHumidity(120, 150, tempLCD, humLCD);
+}
+
+void LCDdisplay::updateMode(int mode) {
+    setMode(mode);
+    drawFanModeSymbol(60, 90, 20, modeLCD, TFT_WHITE);
+}
+
+void LCDdisplay::updateDayLeft(int dayLeft) {
+    setDayLeft(dayLeft);
+    displayMaintenanceDaysLeft(130, 100, dayLeftLCD, TFT_CYAN, TFT_BLACK);
+}
+
+void LCDdisplay::updatePowerState(bool powerState) {
+    setPower(powerState);
+    if (!powerState) {
+        drawPowerSymbol(120, 210, 10, TFT_LIGHTGREY);
+    } else {
+        drawPowerSymbol(120, 210, 10, TFT_DARKGREY);
+    }
+}
+
+void LCDdisplay::updateTime() {
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("Không lấy được thời gian");
+        return;
+    }
+    // Gọi hàm vẽ thời gian bạn đã định nghĩa sẵn
+    displayTime(120, 186, &timeinfo, TFT_WHITE, &Orbitron_Light_24);
+}
+
+void LCDdisplay::updateDisplay() {
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) {
         Serial.println("Không lấy được thời gian");
         return;
     }
 
-    if (!isPowerOn) {
-        displayTime(120, 120, &timeinfo, TFT_WHITE, &Orbitron_Light_24);
-        drawPowerSymbol(120, 210, 10, TFT_LIGHTGREY);
-        delay(500);
-        return;
-    }
+    tft.fillScreen(TFT_BLACK); // Xóa màn hình trước khi vẽ lại toàn bộ
 
-    drawAQIRing(120, 120, 107, 118, this->aqi);
+    drawAQIRing(120, 120, 107, 118, aqiLCD);
     displayDate(120, 55, &timeinfo);
-    drawFanModeSymbol(60, 90, 20, this->mode, TFT_WHITE);
-    displayMaintenanceDaysLeft(130, 100, this->dayLeft, TFT_CYAN, TFT_BLACK);
-    displayTempHumidity(120, 150, this->temp, this->hum);
+    drawFanModeSymbol(60, 90, 20, modeLCD, TFT_WHITE);
+    displayMaintenanceDaysLeft(130, 100, dayLeftLCD, TFT_CYAN, TFT_BLACK);
+    displayTempHumidity(120, 150, tempLCD, humLCD);
     displayTime(120, 186, &timeinfo, TFT_WHITE, &Orbitron_Light_24);
-    drawPowerSymbol(120, 210, 10, TFT_DARKGREY);
-    delay(500);
+
+    if (isPowerOnLCD) {
+        drawPowerSymbol(120, 210, 10, TFT_DARKGREY);
+    } else {
+        drawPowerSymbol(120, 210, 10, TFT_LIGHTGREY);
+    }
 }
 
-
-void LCDdisplay::setPower(bool state) { isPowerOn = state; }
-void LCDdisplay::setTempHum(int t, int h) { temp = t; hum = h; }
-void LCDdisplay::setMode(int m) { mode = m; }
-void LCDdisplay::setDayLeft(int days) { dayLeft = days; }
-void LCDdisplay::setAQI(int value) { aqi = value; }
-
+// --- Hàm set nội bộ ---
+void LCDdisplay::setPower(bool state) { isPowerOnLCD = state; }
+void LCDdisplay::setTempHum(int t, int h) { tempLCD = t; humLCD = h; }
+void LCDdisplay::setMode(int m) { modeLCD = m; }
+void LCDdisplay::setDayLeft(int days) { dayLeftLCD = days; }
+void LCDdisplay::setAQI(int value) { aqiLCD = value; }
 
 uint16_t LCDdisplay::getAQIColor(int aqi) {
     aqi = constrain(aqi, 0, 2);
@@ -67,7 +100,7 @@ uint16_t LCDdisplay::getAQIColor(int aqi) {
     return tft.color565(r, g, 0);
 }
 
-// ==== Copy nguyên code các hàm vẽ từ code gốc ====
+// --- Các hàm vẽ ---
 void LCDdisplay::drawAQIRing(int centerX, int centerY, int innerRadius, int outerRadius, int aqi) {
     uint16_t color = getAQIColor(aqi);
     for (int r = innerRadius; r <= outerRadius; r++) {
