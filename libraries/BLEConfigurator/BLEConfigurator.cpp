@@ -3,34 +3,46 @@
 BLEConfigurator::BLEConfigurator(const String& deviceName): _deviceName(deviceName) {}
 
 void BLEConfigurator::begin(IBLECredsHandler* handler) {
-  _handler = handler;
-  static bool inited = false;
-  if (!inited) {
-    BLEDevice::init(_deviceName.c_str());
-    inited = true;
-  }
-  _server = BLEDevice::createServer();
-  _service = _server->createService(SERVICE_UUID);
+    if (_started) return; // tránh start lại
+    _started = true;
 
-  _ssidChar = _service->createCharacteristic(CHAR_SSID, BLECharacteristic::PROPERTY_WRITE);
-  _passChar = _service->createCharacteristic(CHAR_PASS, BLECharacteristic::PROPERTY_WRITE);
+    _handler = handler;
+    static bool inited = false;
+    if (!inited) {
+        BLEDevice::init(_deviceName.c_str());
+        inited = true;
+    }
 
-  _ssidChar->setCallbacks(new CharCallbacks(this, true));
-  _passChar->setCallbacks(new CharCallbacks(this, false));
+    _server  = BLEDevice::createServer();
+    _service = _server->createService(SERVICE_UUID);
 
-  _service->start();
-  startAdvertising();
+    _ssidChar = _service->createCharacteristic(CHAR_SSID, BLECharacteristic::PROPERTY_WRITE);
+    _passChar = _service->createCharacteristic(CHAR_PASS, BLECharacteristic::PROPERTY_WRITE);
 
-  Serial.println("[BLEConfigurator] BLE started, waiting for Wi-Fi credentials...");
+    _ssidChar->setCallbacks(new CharCallbacks(this, true));
+    _passChar->setCallbacks(new CharCallbacks(this, false));
+
+    _service->start();
+
+    auto adv = BLEDevice::getAdvertising();
+    adv->addServiceUUID(SERVICE_UUID); // để app scan đúng service
+    adv->setScanResponse(true);
+
+    startAdvertising();
+    Serial.println("[BLEConfigurator] BLE started, waiting for Wi-Fi credentials...");
 }
+
+
 
 void BLEConfigurator::startAdvertising() {
   BLEDevice::getAdvertising()->start();
 }
 
 void BLEConfigurator::stopAdvertising() {
-  BLEDevice::getAdvertising()->stop();
+    BLEDevice::getAdvertising()->stop();
+    _started = false;
 }
+
 
 void BLEConfigurator::CharCallbacks::onWrite(BLECharacteristic* c) {
   std::string v = c->getValue();

@@ -19,6 +19,7 @@ public:
   void stopAdvertising();
 
 private:
+  bool _started = false;
   String _deviceName;
   IBLECredsHandler* _handler = nullptr;
 

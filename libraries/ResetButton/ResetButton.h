@@ -7,7 +7,6 @@ public:
     : _pin(pin), _holdMs(holdMs) {}
 
   void begin();
-  // Trả về true đúng **một lần** khi phát hiện giữ đủ lâu
   bool pressedLong();
 
 private:

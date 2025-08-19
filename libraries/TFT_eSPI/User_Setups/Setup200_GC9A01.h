@@ -8,10 +8,10 @@
 
 #define TFT_MOSI 2 // In some display driver board, it might be written as "SDA" and so on.
 #define TFT_SCLK 15
-#define TFT_CS   18  // Chip select control pin
-#define TFT_DC   5  // Data Command control pin
-#define TFT_RST  4  // Reset pin (could connect to Arduino RESET pin)
-#define TFT_BL   19  // LED back-light
+#define TFT_CS   5  // Chip select control pin
+#define TFT_DC   4  // Data Command control pin
+#define TFT_RST  18  // Reset pin (could connect to Arduino RESET pin)
+#define TFT_BL   23  // LED back-light
 
 
 #define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH

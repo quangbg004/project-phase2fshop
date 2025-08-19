@@ -14,7 +14,7 @@ void MQTTClient::setAuth(const char* user, const char* password) {
 void MQTTClient::setMessageHandler(MessageHandler h) { _handler = h; }
 
 void MQTTClient::begin() {
-  _net.setInsecure();             // demo: bỏ CA; thực tế nên set CA
+  _net.setInsecure();
   _mqtt.setServer(_host, _port);
   _mqtt.setCallback(MQTTClient::_staticCallback);
 }
@@ -27,7 +27,7 @@ bool MQTTClient::ensureConnected(const char* clientId, uint32_t retryDelayMs) {
     return true;
   }
   Serial.print("failed, rc="); Serial.println(_mqtt.state());
-  delay(retryDelayMs);
+  //delay(retryDelayMs);
   return false;
 }
 
@@ -43,7 +43,7 @@ bool MQTTClient::subscribe(const String& topic) {
   return _mqtt.subscribe(topic.c_str());
 }
 
-bool MQTTClient::isConnected() const { return _mqtt.connected(); }
+bool MQTTClient::isConnected() { return _mqtt.connected(); }
 
 void MQTTClient::_staticCallback(char* topic, byte* payload, unsigned int length) {
   if (_singletonForCb) _singletonForCb->_dispatch(topic, payload, length);

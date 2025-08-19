@@ -1,106 +1,125 @@
 #include "LCDdisplay.h"
+#include <math.h>
 
-LCDdisplay::LCDdisplay(const char* ssid, const char* password)
-: tft(TFT_eSPI()), ssidLCD(ssid), passwordLCD(password),
-  isPowerOnLCD(true), modeLCD(0), dayLeftLCD(100), aqiLCD(0), tempLCD(30), humLCD(50) {}
 
+// ===== Constructors =====
+LCDdisplay::LCDdisplay()
+: tft(TFT_eSPI()),
+  dateStringLCD("--/--"), hourStringLCD("--"), minStringLCD("--"),
+  powerStateLCD(true), modeLCD(0), dayLeftLCD(100), aqiLCD(0), tempLCD(30), humLCD(50) {}
+
+
+// ===== Begin =====
 void LCDdisplay::begin() {
-    Serial.begin(115200);
-    pinMode(22, OUTPUT);
-    digitalWrite(22, HIGH);
-
     tft.init();
-    tft.setRotation(1);
+    tft.setRotation(0);
+    tft.fillScreen(TFT_BLACK);
     tft.fillScreen(TFT_BLACK);
 
-    WiFi.begin(ssidLCD, passwordLCD);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("\nWiFi connected!");
-    configTime(7 * 3600, 0, "pool.ntp.org");
+    updateAQI(aqiLCD);
+    updateDate(dateStringLCD);
 
-    updateDisplay(); // Vẽ màn hình lần đầu
+    updateTime(hourStringLCD, minStringLCD);
+
+    updateMode(modeLCD);
+    updateDayLeft(dayLeftLCD);
+    updateTempHum(tempLCD, humLCD);
+    updatePowerState(powerStateLCD);
+}
+
+// ===== Update pieces =====
+void LCDdisplay::updateDate(String dateString) {
+    if (powerStateLCD){
+        setDate(dateString);
+        displayDate(120, 55, dateString);
+    }
 }
 
 void LCDdisplay::updateAQI(int aqi) {
-    setAQI(aqi);
-    drawAQIRing(120, 120, 107, 118, aqiLCD);
+    if (powerStateLCD) {
+        setAQI(aqi);
+        drawAQIRing(120, 120, 107, 118, aqiLCD);
+    }
 }
 
 void LCDdisplay::updateTempHum(int temp, int hum) {
-    setTempHum(temp, hum);
-    displayTempHumidity(120, 150, tempLCD, humLCD);
+    if (powerStateLCD) {
+        setTempHum(temp, hum);
+        displayTempHumidity(120, 150, tempLCD, humLCD);
+    }
 }
 
 void LCDdisplay::updateMode(int mode) {
-    setMode(mode);
-    drawFanModeSymbol(60, 90, 20, modeLCD, TFT_WHITE);
+    if (powerStateLCD) {
+        setMode(mode);
+        drawFanModeSymbol(60, 90, 20, modeLCD, TFT_WHITE);
+    }
 }
 
 void LCDdisplay::updateDayLeft(int dayLeft) {
-    setDayLeft(dayLeft);
-    displayMaintenanceDaysLeft(130, 100, dayLeftLCD, TFT_CYAN, TFT_BLACK);
+    if (powerStateLCD) {
+        setDayLeft(dayLeft);
+        displayMaintenanceDaysLeft(130, 100, dayLeftLCD, TFT_CYAN, TFT_BLACK);
+    }
 }
 
 void LCDdisplay::updatePowerState(bool powerState) {
     setPower(powerState);
-    if (!powerState) {
+    if (!powerStateLCD) {
         drawPowerSymbol(120, 210, 10, TFT_LIGHTGREY);
     } else {
         drawPowerSymbol(120, 210, 10, TFT_DARKGREY);
     }
 }
 
-void LCDdisplay::updateTime() {
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        Serial.println("Không lấy được thời gian");
-        return;
+// ===== Time =====
+void LCDdisplay::updateTime(String hourString, String minString) {
+    setTime(hourString, minString);
+    if(powerStateLCD) {
+        displayTime(120, 186, hourStringLCD, minStringLCD, TFT_WHITE, &Orbitron_Light_24);
     }
-    // Gọi hàm vẽ thời gian bạn đã định nghĩa sẵn
-    displayTime(120, 186, &timeinfo, TFT_WHITE, &Orbitron_Light_24);
+    else {
+        displayTime(120, 120, hourStringLCD, minStringLCD, TFT_WHITE, &Orbitron_Light_32);
+    }
 }
 
+// ===== Redraw all =====
 void LCDdisplay::updateDisplay() {
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        Serial.println("Không lấy được thời gian");
-        return;
+    tft.fillScreen(TFT_BLACK);
+    if (powerStateLCD) {
+        updateAQI(aqiLCD);
+        updateDate(dateStringLCD);
+        updateTime(hourStringLCD, minStringLCD);
+        updateMode(modeLCD);
+        updateDayLeft(dayLeftLCD);
+        updateTempHum(tempLCD, humLCD);
+        updatePowerState(powerStateLCD);
     }
-
-    tft.fillScreen(TFT_BLACK); // Xóa màn hình trước khi vẽ lại toàn bộ
-
-    drawAQIRing(120, 120, 107, 118, aqiLCD);
-    displayDate(120, 55, &timeinfo);
-    drawFanModeSymbol(60, 90, 20, modeLCD, TFT_WHITE);
-    displayMaintenanceDaysLeft(130, 100, dayLeftLCD, TFT_CYAN, TFT_BLACK);
-    displayTempHumidity(120, 150, tempLCD, humLCD);
-    displayTime(120, 186, &timeinfo, TFT_WHITE, &Orbitron_Light_24);
-
-    if (isPowerOnLCD) {
-        drawPowerSymbol(120, 210, 10, TFT_DARKGREY);
-    } else {
-        drawPowerSymbol(120, 210, 10, TFT_LIGHTGREY);
+    else {
+        updatePowerState(powerStateLCD);
+        updateTime(hourStringLCD, minStringLCD);
     }
 }
 
-// --- Hàm set nội bộ ---
-void LCDdisplay::setPower(bool state) { isPowerOnLCD = state; }
+// ===== Setters =====
+void LCDdisplay::setPower(bool state) { powerStateLCD = state; }
 void LCDdisplay::setTempHum(int t, int h) { tempLCD = t; humLCD = h; }
 void LCDdisplay::setMode(int m) { modeLCD = m; }
 void LCDdisplay::setDayLeft(int days) { dayLeftLCD = days; }
 void LCDdisplay::setAQI(int value) { aqiLCD = value; }
+void LCDdisplay::setTime(String hour, String min) { hourStringLCD = hour; minStringLCD = min; };
+void LCDdisplay::setDate(String date) { dateStringLCD = date; };
 
+// ===== Helpers =====
 uint16_t LCDdisplay::getAQIColor(int aqi) {
+    // Hiện đang test 3 mức 0..2
     aqi = constrain(aqi, 0, 2);
     uint8_t r = map(aqi, 0, 2, 0, 255);
     uint8_t g = map(aqi, 0, 2, 255, 0);
     return tft.color565(r, g, 0);
 }
 
-// --- Các hàm vẽ ---
+// --- Vẽ ---
 void LCDdisplay::drawAQIRing(int centerX, int centerY, int innerRadius, int outerRadius, int aqi) {
     uint16_t color = getAQIColor(aqi);
     for (int r = innerRadius; r <= outerRadius; r++) {
@@ -111,9 +130,9 @@ void LCDdisplay::drawAQIRing(int centerX, int centerY, int innerRadius, int oute
 void LCDdisplay::drawPowerSymbol(int x, int y, int radius, uint16_t color) {
     for (int r = radius - 1; r <= radius + 1; r++) {
         for (int angle = 135; angle <= 405; angle++) {
-            float rad = angle * 3.14159 / 180.0;
-            int px = x + r * cos(rad);
-            int py = y - r * sin(rad);
+            float rad = angle * 3.14159f / 180.0f;
+            int px = x + r * cosf(rad);
+            int py = y - r * sinf(rad);
             tft.drawPixel(px, py, color);
         }
     }
@@ -154,47 +173,74 @@ void LCDdisplay::displayMaintenanceDaysLeft(int x, int y, int daysLeft, uint16_t
     tft.print(" day");
 }
 
-void LCDdisplay::displayDate(int centerX, int y, struct tm *timeinfo) {
-    char dateStr[16];
-    strftime(dateStr, sizeof(dateStr), "%d/%m", timeinfo);
-    String dateString = String(dateStr);
+void LCDdisplay::displayDate(int centerX, int y, String dateString) {
     tft.setFreeFont(&FreeSans12pt7b);
     int dateWidth = tft.textWidth(dateString);
-    tft.fillRect(centerX - dateWidth / 2, y + 18, dateWidth + 4, 24, TFT_BLACK);
+    tft.fillRect(centerX - dateWidth / 2, y - 18, dateWidth + 4, 24, TFT_BLACK);
     tft.setTextColor(TFT_CYAN, TFT_BLACK);
     tft.setCursor(centerX - dateWidth / 2, y);
     tft.print(dateString);
 }
 
-void LCDdisplay::displayTime(int centerX, int y, struct tm *timeinfo, uint16_t color, const GFXfont *font) {
-    char hourStr[3];
-    char minStr[3];
-    strftime(hourStr, sizeof(hourStr), "%H", timeinfo);
-    strftime(minStr, sizeof(minStr), "%M", timeinfo);
+void LCDdisplay::displayTime(int centerX, int y,
+                             String hourString, String minString,
+                             uint16_t color, const GFXfont *font) {
+  tft.setFreeFont(font);
+  tft.setTextColor(color, TFT_BLACK);
+  tft.setTextWrap(false);
 
-    String hourString = String(hourStr);
-    String minString  = String(minStr);
+  int wHH = tft.textWidth(hourString);
+  int wMM = tft.textWidth(minString);
+  int wCL = tft.textWidth(":");
+  int fh  = tft.fontHeight();
 
-    tft.setFreeFont(font);
-    int hourWidth = tft.textWidth(hourString);
-    int minWidth = tft.textWidth(minString);
+  const int gapL = 7;
+  const int gapR = 7;
 
-    tft.fillRect(centerX - hourWidth + minWidth - 10, y - 18, hourWidth + minWidth + 10, 24, TFT_BLACK);
-    tft.setTextColor(color, TFT_BLACK);
-    tft.setCursor(centerX - hourWidth - 5, y);
-    tft.print(hourString);
-    tft.setCursor(centerX + 9, y);
-    tft.print(minString);
-    delay(200);
-    tft.setCursor(centerX, y);
-    tft.print(':');
+  int total = wHH + gapL + wCL + gapR + wMM;
+
+  int boxX = centerX - total/2 - 30;
+  int boxY = y - fh;
+  int boxW = total + 60;
+  int boxH = fh + 6;
+  tft.fillRect(boxX, boxY, boxW, boxH, TFT_BLACK);
+
+  int x = centerX - total/2;
+
+  // HH
+  tft.setCursor(x, y);
+  tft.print(hourString);
+  x += wHH + gapL;
+
+  // Blink “:”
+  static uint32_t tick = 0;
+  static bool     on   = true;
+  if (millis() - tick >= 250) { tick = millis(); on = !on; }
+
+  int colonBoxX = x;
+  int colonBoxY = y - fh;
+  int colonBoxW = wCL;
+  int colonBoxH = fh + 6;
+  tft.fillRect(colonBoxX, colonBoxY, colonBoxW, colonBoxH, TFT_BLACK);
+  if (on) {
+    tft.setCursor(x, y);
+    tft.print(":");
+  }
+  x += wCL + gapR;
+
+  // MM
+  tft.setCursor(x, y);
+  tft.print(minString);
 }
+
+
+
 
 void LCDdisplay::displayTempHumidity(int centerX, int rectY, int temp, int hum) {
     String envStr = String(temp) + " C " + String(hum) + "%";
     tft.setFreeFont(&FreeSansBold18pt7b);
     int envWidth = tft.textWidth(envStr);
-    tft.fillRect(centerX - envWidth / 2 - 10, rectY - 30, envWidth + 30, 35, TFT_BLACK);
+    tft.fillRect(20, rectY - 30, 200, 35, TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setCursor(centerX - envWidth / 2, rectY);
     tft.print(envStr);

@@ -1,7 +1,7 @@
 #include "ResetButton.h"
 
 void ResetButton::begin() {
-  pinMode(_pin, INPUT_PULLUP); // nút kéo xuống GND
+  pinMode(_pin, INPUT_PULLUP);
 }
 
 bool ResetButton::pressedLong() {
@@ -10,7 +10,6 @@ bool ResetButton::pressedLong() {
     _tracking = true; _t0 = millis();
   } else if (level == LOW && _tracking) {
     if (millis() - _t0 >= _holdMs) {
-      // chờ đến khi thả ra để chống lặp
       while (digitalRead(_pin) == LOW) delay(10);
       _tracking = false;
       return true;

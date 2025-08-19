@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
+#include <functional>
 
 class MQTTClient {
 public:
@@ -17,7 +18,7 @@ public:
   bool publish(const String& topic, const String& payload, bool retained=false);
   bool subscribe(const String& topic);
 
-  bool isConnected() const;
+  bool isConnected();
 
 private:
   WiFiClientSecure _net;
